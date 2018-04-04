@@ -1,0 +1,77 @@
+关于虎嗅爬虫制作的总结
+
+1. 虎嗅的第一页为标准的静态网页  采用常规的response.xpath爬取数据即可
+
+2.虎嗅的第二页开始均采用（点击加载更多的方式）其实质就是AJAX方式刷新页面  通过安装CHOROM Toggle JavaScript插件 关闭JavaScript功能 再次打开JavaScript功能 可以发现那些网页内容是通过JavaScript生成的
+  通过JavaScript动态生成的内容是在网页的sourcecode看不到的，所以不能简单的采用response.xpath方式进行数据的提取。 这时候就需要用到chrome network 开发工具和Fiddler抓包软件了，我发现对于从第二页开始
+  的页面加载都是采用POST AJAX方式进行的，用户点击“加载更多”其实质是启动了一个AJAX POST,既然是POST方式我们可以抓取用户要求访问的URL和提交的数据表格。
+  用户要求访问的URL:https://www.huxiu.com/v2_action/article_list
+  用户提交的数据表格是：
+   form_data={'huxiu_hash_code': '7e60f03b00514b92a7ab248523bb7e75',  #这是虎嗅网络的HASH值 不变
+              'page':'2',  #提交的访问页码数值 （注意提交时候要设为字符串类型非INT）
+			  'last_dateline':TIME_STAMP,   #此处困扰我半天 后发现其实是当前页面最后一篇文章的时间戳，通过RE可以找到它
+			  }
+  我们继续对PAGE2之后的页面进行抓包提取，这时利用的工具就是Fiddler,个人发现它在web访问数据抓取和分析非常方便。废话少说，我发现从第二页开始返回的数据是非标准的HTML,后发现其实质是json结构的数据，因此通过Fiddler
+  我们看JSON格式解析
+  
+  
+
+
+
+用于查找文章标题的关键字
+class=\"transition msubstr-row2\" target=\"_blank\">(.*)</a>
+after python process 
+sting = 'class="transition msubstr-row2" target="_blank"> test 2 <\\/a>'  (双引号前的‘\’消失，‘/’之前的'\'因为转义的原因变为'\\')
+class="transition msubstr-row2" target="_blank">(.*)<\\\\/a> 
+
+patern ='class="transition msubstr-row2" target="_blank">(.*)<\\\\/a>'
+response.xpath('//a[@class="transition msubstr-row2"]/text()').extract()   PAGE 1 : Article Title List
+
+用于查找文章Link
+P1:
+response.xpath('//a[@class="transition msubstr-row2"]/@href').extract()
+
+OTHER PAGE
+patern='<a href="(.*)" class="transition msubstr-row2" target="_blank">'
+
+用于查找文章author的关键字
+<span class=\"author-name\">(.*) </span>
+$x('//span[@class="author-name "]/text()')[3]  #注意此处多一个空格 这尼玛坑爹  PAGE 1 : Article Authors List
+"郑永年©"
+response.xpath(
+
+pattern ='<span class="author-name">(.*)<'
+re.compile(pattern).findall(data)    (返回一个匹配（）的列举表）
+
+
+artical content
+'(.*)</span>
+$x('//div[@class="mob-sub"]/text()')
+(53) [text, text, text, text, text, text, text, text
+, text, text, text, text, text, text, text, text, 
+text, text, text, text, text, text, text, text, text,
+ text, text, text, text, text, text, text, text, text,
+ text, text, text, text, text, text, text, text, text,
+ text, text, text, text, text, text, text, text, text, text]
+ 
+
+pat='<div class="mob-sub">(.*)<'
+
+
+ post data extraction  
+
+ page 1 to get the time stamp of last article 
+ response.xpath('//div[@class="get-mod-more js-get-mod-more-list transition"]/@data-last_dateline').extract()[0]
+ 
+ 
+ other page
+ data_or=str(response.body)
+ data=json.loads(data_or)
+ data["last_dateline"]   当前的最后文章的timestamp
+ data["total_page"]     一共有多少页
+ 
+ 
+ data_j["data"]   是后面通过RE查找的数据源
+ 
+ POST DATA
+ form ={"huxiu_hash_code":"7e60f03b00514b92a7ab248523bb7e75","page":4,"last_dateline":data_j["last_dateline"],}

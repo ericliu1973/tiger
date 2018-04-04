@@ -1,0 +1,14 @@
+setup.py
+huxiu/__init__.py
+huxiu/items.py
+huxiu/middlewares.py
+huxiu/pipelines.py
+huxiu/settings.py
+huxiu/spiders/__init__.py
+huxiu/spiders/start.py
+huxiu/spiders/tiger.py
+project.egg-info/PKG-INFO
+project.egg-info/SOURCES.txt
+project.egg-info/dependency_links.txt
+project.egg-info/entry_points.txt
+project.egg-info/top_level.txt
